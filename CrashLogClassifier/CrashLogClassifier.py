@@ -1,32 +1,42 @@
 import os
+import re
 
-# IMPORTANT: Ensure this path points exactly to where you saved your Unreal log file.
-# Keep the 'r' at the start of the quotes!
 log_file_path = r"C:\Users\yeyian\Desktop\QATestProject.log" 
 
 print(f"Scanning file: {log_file_path}\n")
 
-# Keywords Unreal uses when things go wrong
+# This is the Regex pattern. It looks for "[File:" and "[Line:" and grabs the text inside.
+crash_pattern = re.compile(r"\[File:(.*?)\]\s*\[Line:\s*(\d+)\]")
 crash_keywords = ["Fatal error", "Access violation", "Assertion failed", "Exception"]
 
 try:
-    # Open the file and read it line by line
     with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as file:
         lines = file.readlines()
         
     crash_detected = False
     
-    # Loop through every line in the log
     for line_number, line in enumerate(lines, 1):
-        # Check if any of our keywords are in this line
         for keyword in crash_keywords:
             if keyword.lower() in line.lower():
-                print(f"🚨 CRASH DETECTED on line {line_number}:")
-                print(f"   {line.strip()}")
-                crash_detected = True
-                break # Move to the next line once we find a match
+                print(f"🚨 CRASH DETECTED on log line {line_number}:")
                 
-    # If we checked the whole file and found nothing
+                # Search the line for the File and Line pattern
+                match = crash_pattern.search(line)
+                if match:
+                    file_path = match.group(1)
+                    source_line = match.group(2)
+                    
+                    # Extract just the filename (e.g., UnrealEngine.cpp) from the long path
+                    file_name = file_path.split('\\')[-1]
+                    
+                    print(f"   📍 Location: {file_name} at line {source_line}")
+                else:
+                    print(f"   {line.strip()}")
+                    
+                print("-" * 40) 
+                crash_detected = True
+                break 
+                
     if not crash_detected:
         print("✅ No fatal errors found in the log.")
 
